@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Código de verificación · Punto Violeta Digital</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background-color: #0d0522; font-family: Arial, sans-serif; }
+        .wrapper { background-color: #0d0522; padding: 40px 20px; }
+        .container {
+            max-width: 540px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, #1a0a35 0%, #120529 100%);
+            border: 1px solid rgba(139,92,246,0.3);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #6d28d9, #5b21b6);
+            padding: 32px 40px;
+            text-align: center;
+        }
+        .header h1 { color: white; font-size: 20px; font-weight: 800; margin-top: 12px; }
+        .header p { color: rgba(255,255,255,0.75); font-size: 13px; margin-top: 4px; }
+        .logo-mark { display: inline-block; width: 48px; height: 48px; background: rgba(255,255,255,0.15); border-radius: 12px; line-height: 48px; font-size: 24px; text-align: center; }
+        .body { padding: 36px 40px; }
+        .greeting { color: #e9d5ff; font-size: 15px; margin-bottom: 16px; line-height: 1.6; }
+        .code-box {
+            background: rgba(109,40,217,0.15);
+            border: 2px solid rgba(139,92,246,0.5);
+            border-radius: 12px;
+            font-size: 36px;
+            font-weight: 900;
+            text-align: center;
+            padding: 24px;
+            margin: 24px 0;
+            letter-spacing: 0.4em;
+            color: #c4b5fd;
+        }
+        .note { color: rgba(196,181,253,0.7); font-size: 13px; line-height: 1.6; margin-bottom: 12px; }
+        .warning { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; padding: 12px 16px; color: #fca5a5; font-size: 12px; margin-top: 20px; }
+        .footer {
+            background: rgba(0,0,0,0.2);
+            border-top: 1px solid rgba(139,92,246,0.2);
+            padding: 20px 40px;
+            text-align: center;
+            color: rgba(167,139,250,0.5);
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <div class="container">
+        <div class="header">
+            <div class="logo-mark">&#x1F4CD;</div>
+            <h1>Punto Violeta Digital</h1>
+            <p>Verificación de seguridad &middot; Lavalleja</p>
+        </div>
+        <div class="body">
+            <p class="greeting">Hola,<br>
+            Recibiste este correo porque alguien &mdash; esperamos que seas vos &mdash; intenta acceder al panel de administración.</p>
+
+            <p class="note" style="text-align:center; font-size:14px; color:#c4b5fd;">Tu código de verificación es:</p>
+
+            <div class="code-box">{{ code }}</div>
+
+            <p class="note">Este código es válido por <strong style="color:#e9d5ff;">10 minutos</strong>. Ingresalo en la pantalla de verificación para completar tu acceso.</p>
+
+            <div class="warning">
+                <strong>&#x26A0; Aviso de seguridad:</strong> Si no solicitaste este acceso, ignorá este correo. Nadie del equipo de Punto Violeta Digital te pedirá este código.
+            </div>
+        </div>
+        <div class="footer">
+            <p>Mensaje automático &mdash; No respondas a este correo.</p>
+            <p style="margin-top:6px;">&copy; 2026 Punto Violeta Digital &middot; Intendencia de Lavalleja</p>
+        </div>
+    </div>
+</div>
+</body>
+</html>

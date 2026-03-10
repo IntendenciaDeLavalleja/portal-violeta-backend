@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if reading else 'Nueva' }} Lectura{% endblock %}
+{% block content %}
+
+<div class="flex items-center gap-3 mb-8">
+    <a href="{{ url_for('admin.readings') }}" class="text-purple-400/60 hover:text-purple-300 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </a>
+    <div>
+        <h1 class="text-2xl font-extrabold text-white tracking-tight">
+            {{ 'Editar Lectura' if reading else 'Nueva Lectura' }}
+        </h1>
+        <p class="text-sm text-purple-400/70 mt-0.5">Recurso o documento externo recomendado</p>
+    </div>
+</div>
+
+<div class="max-w-2xl">
+    <div class="vio-card p-8">
+        <form method="POST" class="space-y-5">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div>
+                <label class="vio-label" for="title">Título <span class="text-red-400">*</span></label>
+                <input type="text" id="title" name="title" required
+                       value="{{ reading.title if reading else '' }}"
+                       class="vio-input" placeholder="Ej: Guía sobre violencia doméstica...">
+            </div>
+
+            <div>
+                <label class="vio-label" for="document_url">URL del documento <span class="text-red-400">*</span></label>
+                <input type="url" id="document_url" name="document_url" required
+                       value="{{ reading.document_url if reading else '' }}"
+                       class="vio-input" placeholder="https://...">
+                <p class="text-xs text-purple-400/60 mt-1">Enlace directo al PDF, artículo u otro recurso externo</p>
+            </div>
+
+            <div>
+                <label class="vio-label" for="cover_image_url">Imagen de portada <span class="text-purple-500/50 font-normal">(URL)</span></label>
+                <input type="url" id="cover_image_url" name="cover_image_url"
+                       value="{{ reading.cover_image_url if reading else '' }}"
+                       class="vio-input" placeholder="https://... imagen de portada">
+                <p class="text-xs text-purple-400/60 mt-1">Tamaño recomendado: <span class="text-purple-300 font-medium">1200 × 630 px</span></p>
+                <div id="cover-preview" class="{{ '' if (reading and reading.cover_image_url) else 'hidden' }} mt-3">
+                    <img id="cover-img" src="{{ reading.cover_image_url if reading else '' }}"
+                         class="w-full max-h-48 rounded-xl object-cover" alt="">
+                </div>
+            </div>
+
+            <div>
+                <label class="vio-label" for="summary">Resumen</label>
+                <textarea id="summary" name="summary" rows="4"
+                          class="vio-input resize-none"
+                          placeholder="Breve descripción del contenido del documento...">{{ reading.summary if reading else '' }}</textarea>
+            </div>
+
+            <div class="flex items-center gap-3 p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                <input type="checkbox" id="is_active" name="is_active" value="1"
+                       {% if not reading or reading.is_active %}checked{% endif %}
+                       class="w-4 h-4 rounded accent-purple-500">
+                <div>
+                    <label for="is_active" class="text-sm font-semibold text-white cursor-pointer">Lectura activa</label>
+                    <p class="text-xs text-purple-400/70">Las lecturas inactivas no aparecen en el sitio público</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 pt-2">
+                <button type="submit" class="btn btn-primary flex-1 justify-center">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    {{ 'Guardar cambios' if reading else 'Crear lectura' }}
+                </button>
+                <a href="{{ url_for('admin.readings') }}" class="btn btn-ghost">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    document.getElementById('cover_image_url').addEventListener('input', function() {
+        const preview = document.getElementById('cover-preview');
+        const img = document.getElementById('cover-img');
+        if (this.value) { img.src = this.value; preview.classList.remove('hidden'); }
+        else { preview.classList.add('hidden'); }
+    });
+</script>
+{% endblock %}

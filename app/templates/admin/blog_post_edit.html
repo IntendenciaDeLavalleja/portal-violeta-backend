@@ -1,0 +1,487 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if post else 'Nueva entrada' }} · Blog{% endblock %}
+
+{% block scripts %}
+<link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
+<style>
+    .ql-toolbar.ql-snow {
+        border: 1px solid rgba(139, 92, 246, 0.35);
+        border-bottom: 0;
+        border-radius: 0.75rem 0.75rem 0 0;
+        background: rgba(30, 10, 60, 0.95);
+    }
+    .ql-container.ql-snow {
+        border: 1px solid rgba(139, 92, 246, 0.35);
+        border-radius: 0 0 0.75rem 0.75rem;
+        min-height: 320px;
+        background: rgba(109, 40, 217, 0.08);
+    }
+    .ql-editor {
+        color: #e9d5ff;
+        font-size: 0.95rem;
+        line-height: 1.7;
+        min-height: 320px;
+    }
+    .ql-snow .ql-stroke { stroke: #c4b5fd; }
+    .ql-snow .ql-fill { fill: #c4b5fd; }
+    .ql-snow .ql-picker { color: #c4b5fd; }
+    .ql-snow .ql-picker-options { background: #1a0a35; border-color: rgba(139, 92, 246, 0.35); }
+    .ql-snow .ql-tooltip {
+        background: #1a0a35;
+        border-color: rgba(139, 92, 246, 0.35);
+        color: #e9d5ff;
+    }
+    .ql-editor.ql-blank::before { color: rgba(196, 181, 253, 0.45); font-style: normal; }
+    .ql-editor h1, .ql-editor h2, .ql-editor h3, .ql-editor h4 { color: #fff; }
+    .ql-editor a { color: #c4b5fd; text-decoration: underline; }
+    .ql-editor blockquote { border-left: 4px solid #7c3aed; color: #d8b4fe; }
+    #content_fallback_wrapper.hidden { display: none; }
+    .preview-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; display: none; align-items: flex-start; justify-content: center; padding: 2rem 1rem; overflow-y: auto; }
+    .preview-modal-overlay.open { display: flex; }
+    .preview-modal { background: #0f0528; border: 1px solid rgba(139,92,246,0.3); border-radius: 1rem; width: 100%; max-width: 48rem; margin: auto; }
+    .preview-content { color: #e9d5ff; }
+    .preview-content h2 { font-size: 1.5rem; font-weight: 800; color: white; margin: 1.5rem 0 0.75rem; }
+    .preview-content h3 { font-size: 1.25rem; font-weight: 700; color: #ede9fe; margin: 1.25rem 0 0.5rem; }
+    .preview-content p { margin-bottom: 1rem; line-height: 1.75; opacity: 0.92; }
+    .uploader-zone {
+        border: 2px dashed rgba(139, 92, 246, 0.35);
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        text-align: center;
+        transition: border-color 0.2s;
+    }
+    .uploader-zone:hover { border-color: rgba(139, 92, 246, 0.6); }
+</style>
+<script>
+const _csrfToken = document.querySelector('meta[name="csrf-token"]').content;
+class MinioUploader {
+    constructor(containerId, opts) {
+        this.el       = document.getElementById(containerId);
+        this.urlInput = document.getElementById(opts.urlInputId);
+        this.keyInput = document.getElementById(opts.keyInputId);
+        this.endpoint = opts.endpoint;
+        this.expW     = opts.w;
+        this.expH     = opts.h;
+        this.file     = null;
+        this.el.__uploader__ = this;
+        this._render(this.el.dataset.initialUrl || '');
+    }
+    _render(url) { if (url) { this._stDone(url); } else { this._stEmpty(); } }
+    _stEmpty() {
+        this.el.innerHTML = `
+          <div class="uploader-zone flex flex-col items-center gap-2">
+            <svg class="w-8 h-8 text-purple-400/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586A2 2 0 0110 11h4a2 2 0 011.414.586L20 16M14 8V4m0 0l-4 4m4-4l4 4"/>
+            </svg>
+            <p class="text-xs text-purple-400/60">WebP · <strong class="text-purple-300">${this.expW} × ${this.expH} px</strong> exacto</p>
+            <label class="btn btn-ghost btn-sm cursor-pointer mt-1">
+              📂 Seleccionar imagen
+              <input type="file" accept=".webp,image/webp" class="sr-only">
+            </label>
+          </div>`;
+        this.el.querySelector('input[type=file]').addEventListener('change', e => this._onFile(e.target.files[0]));
+    }
+    _stPreview(dataUrl) {
+        this.el.innerHTML = `
+          <div class="space-y-2">
+            <div class="rounded-xl overflow-hidden border border-purple-500/20" style="max-height:180px;display:flex;align-items:center;justify-content:center;background:#1a0a35">
+              <img src="${dataUrl}" style="max-height:180px;max-width:100%;object-fit:contain">
+            </div>
+            <p class="text-xs text-amber-300/80 text-center">Vista previa local — aún no está en MinIO</p>
+            <div class="flex gap-2">
+              <button type="button" class="btn btn-primary btn-sm flex-1 justify-center upload-btn">⬆ Subir a MinIO</button>
+              <button type="button" class="btn btn-ghost btn-sm cancel-btn">✕ Cancelar</button>
+            </div>
+          </div>`;
+        this.el.querySelector('.upload-btn').addEventListener('click', () => this._doUpload());
+        this.el.querySelector('.cancel-btn').addEventListener('click', () => { this.file = null; this._stEmpty(); });
+    }
+    _stLoading() {
+        this.el.innerHTML = `<div class="uploader-zone flex items-center justify-center gap-3"><div class="animate-spin rounded-full h-5 w-5 border-2 border-purple-400 border-t-transparent"></div><span class="text-sm text-purple-300">Subiendo a MinIO…</span></div>`;
+    }
+    _stDone(url) {
+        this.el.innerHTML = `
+          <div class="space-y-2">
+            <div class="relative rounded-xl overflow-hidden border border-green-500/25" style="max-height:180px;display:flex;align-items:center;justify-content:center;background:#0a1a0a">
+              <img src="${url}" style="max-height:180px;max-width:100%;object-fit:contain" onerror="this.style.opacity='0.3'">
+              <span style="position:absolute;top:6px;right:6px" class="text-xs bg-green-500/90 text-white px-2 py-0.5 rounded-full font-medium">✓ MinIO</span>
+            </div>
+            <div class="flex gap-2">
+              <label class="btn btn-ghost btn-sm flex-1 cursor-pointer justify-center">
+                ✎ Cambiar
+                <input type="file" accept=".webp,image/webp" class="sr-only">
+              </label>
+              <button type="button" class="btn btn-danger btn-sm del-btn">🗑 Eliminar</button>
+            </div>
+          </div>`;
+        this.el.querySelector('input[type=file]').addEventListener('change', e => this._onFile(e.target.files[0]));
+        this.el.querySelector('.del-btn').addEventListener('click', () => this._doDelete());
+    }
+    _stError(msg) {
+        const err = document.createElement('div');
+        err.className = 'text-xs text-red-300 bg-red-400/10 border border-red-400/25 rounded-lg p-2 mb-2';
+        err.textContent = '⚠ ' + msg;
+        this._stEmpty();
+        this.el.insertBefore(err, this.el.firstChild);
+        setTimeout(() => err.remove && err.remove(), 7000);
+    }
+    _onFile(file) {
+        if (!file) return;
+        if (file.type !== 'image/webp') { this._stError(`Solo se acepta WebP. Formato recibido: "${file.type || 'desconocido'}".`); return; }
+        const blobUrl = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            URL.revokeObjectURL(blobUrl);
+            if (img.naturalWidth !== this.expW || img.naturalHeight !== this.expH) {
+                this._stError(`Dimensiones incorrectas: se esperaba ${this.expW} × ${this.expH} px, el archivo tiene ${img.naturalWidth} × ${img.naturalHeight} px.`);
+                return;
+            }
+            this.file = file;
+            const reader = new FileReader();
+            reader.onload = e => this._stPreview(e.target.result);
+            reader.readAsDataURL(file);
+        };
+        img.onerror = () => { URL.revokeObjectURL(blobUrl); this._stError('No se pudo leer el archivo.'); };
+        img.src = blobUrl;
+    }
+    async _doUpload() {
+        if (!this.file) return;
+        this._stLoading();
+        const fd = new FormData(); fd.append('file', this.file);
+        try {
+            const res  = await fetch(this.endpoint, { method: 'POST', headers: { 'X-CSRFToken': _csrfToken }, body: fd });
+            const data = await res.json();
+            if (!res.ok || !data.ok) { this._stError(data.error || 'Error al subir.'); return; }
+            this.urlInput.value = data.url; this.keyInput.value = data.key; this.file = null; this._stDone(data.url);
+        } catch (_) { this._stError('Error de red al subir la imagen.'); }
+    }
+    async _doDelete() {
+        const _confirmed = await customConfirm('¿Eliminar esta imagen de MinIO permanentemente?');
+        if (!_confirmed) return;
+        const key = this.keyInput.value;
+        if (key) { try { await fetch('/admin/api/upload', { method: 'DELETE', headers: { 'Content-Type': 'application/json', 'X-CSRFToken': _csrfToken }, body: JSON.stringify({ key }) }); } catch (_) {} }
+        this.urlInput.value = ''; this.keyInput.value = ''; this._stEmpty();
+    }
+}
+function initUploaders() {
+    document.querySelectorAll('[data-uploader]').forEach(el => {
+        if (el.dataset.uploaderReady) return;
+        const opts = JSON.parse(el.dataset.uploader);
+        new MinioUploader(el.id, opts);
+        el.dataset.uploaderReady = '1';
+    });
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% set fd = form_data or {} %}
+{% set v_title = fd.get('title', post.title if post else '') %}
+{% set v_slug = fd.get('slug', post.slug if post else '') %}
+{% set v_content = fd.get('content_html', post.content_html if post else '') %}
+{% set v_excerpt = fd.get('excerpt', post.excerpt if post else '') %}
+{% set v_cover = fd.get('cover_image_url', post.cover_image_url if post else '') %}
+{% set v_cover_key = fd.get('cover_image_key', post.cover_image_key if post else '') %}
+{% set v_category_id = fd.get('category_id', (post.category_id|string) if post and post.category_id else '') %}
+{% set v_blog_author_id = fd.get('blog_author_id', (post.blog_author_id|string) if post and post.blog_author_id else '') %}
+
+<div class="flex items-center gap-3 mb-8">
+    <a href="{{ url_for('admin.blog_posts') }}" class="text-purple-400/60 hover:text-purple-300 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </a>
+    <div class="flex-1">
+        <h1 class="text-2xl font-extrabold text-white tracking-tight">{{ 'Editar entrada' if post else 'Nueva entrada del Blog' }}</h1>
+        {% if post %}
+        <p class="text-sm text-purple-400/70 mt-0.5"><span class="badge {{ 'badge-green' if post.status == 'published' else 'badge-amber' }} mr-2">{{ 'Publicado' if post.status == 'published' else 'Borrador' }}</span>/{{ post.slug }}</p>
+        {% endif %}
+    </div>
+    <button type="button" id="open-preview" class="btn btn-ghost">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        Previsualizar
+    </button>
+</div>
+
+<form method="POST" id="post-form" class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="xl:col-span-2 space-y-5">
+        <div class="vio-card p-6 space-y-5">
+            <div>
+                <label class="vio-label" for="title">Título <span class="text-red-400">*</span></label>
+                <input type="text" id="title" name="title" required value="{{ v_title }}" class="vio-input text-lg font-semibold" placeholder="Título de la entrada...">
+            </div>
+            <div>
+                <label class="vio-label" for="content_html">Contenido <span class="text-red-400">*</span></label>
+                <input type="hidden" id="content_html" name="content_html" value="{{ v_content|e }}">
+                <div id="quill_editor" class="rounded-xl overflow-hidden"></div>
+                <div id="content_fallback_wrapper" class="hidden mt-3">
+                    <textarea id="content_fallback" class="vio-input min-h-90 resize-y" placeholder="Escribí el contenido completo de la entrada...">{{ v_content }}</textarea>
+                </div>
+                <p class="text-xs text-purple-400/65 mt-2">Editor enriquecido con formato, listas, tablas, enlaces, citas, código e imágenes.</p>
+            </div>
+        </div>
+
+        <div class="vio-card p-6">
+            <label class="vio-label" for="excerpt">Resumen / Extracto <span class="text-red-400">*</span></label>
+            <p class="text-xs text-purple-400/60 mb-2">Un párrafo breve que aparece en listados y redes sociales.</p>
+            <textarea id="excerpt" name="excerpt" rows="3" required maxlength="600" class="vio-input resize-none" placeholder="Breve descripción de esta entrada...">{{ v_excerpt }}</textarea>
+        </div>
+    </div>
+
+    <div class="space-y-5">
+        <div class="vio-card p-6 space-y-4">
+            <h3 class="text-sm font-bold text-white">Publicación</h3>
+            <div class="flex flex-col gap-3">
+                <button type="submit" name="action" value="publish" class="btn btn-primary justify-center">Publicar ahora</button>
+                <button type="submit" name="action" value="draft" class="btn btn-ghost justify-center">Guardar borrador</button>
+            </div>
+            {% if post %}
+            <div class="pt-3 border-t border-vio-700/30">
+                <form method="POST" action="{{ url_for('admin.blog_post_delete', post_id=post.id) }}" x-data x-on:submit.prevent="customConfirm('¿Eliminar esta entrada permanentemente? Esta acción no se puede deshacer.').then(res => { if(res) $el.submit(); })">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger btn-sm w-full justify-center">Eliminar entrada</button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="vio-card p-6 space-y-4">
+            <h3 class="text-sm font-bold text-white">Metadatos del post</h3>
+            <div>
+                <label class="vio-label" for="category_id">Categoría <span class="text-red-400">*</span></label>
+                <select id="category_id" name="category_id" class="vio-input" required>
+                    <option value="">Seleccionar categoría</option>
+                    {% for category in categories %}
+                    <option value="{{ category.id }}" {{ 'selected' if v_category_id == (category.id|string) else '' }}>{{ category.name }}{{ '' if category.is_active else ' (inactiva)' }}</option>
+                    {% endfor %}
+                </select>
+                <a href="{{ url_for('admin.blog_categories') }}" class="text-xs text-purple-300 hover:text-purple-200 mt-2 inline-block">Administrar categorías</a>
+            </div>
+            <div>
+                <label class="vio-label" for="slug">Slug</label>
+                <input type="text" id="slug" name="slug" value="{{ v_slug }}" class="vio-input" placeholder="mi-entrada-del-blog">
+                <p class="text-xs text-purple-400/65 mt-2">URL final: <span class="text-purple-300">/{{ v_slug or 'slug-generado' }}</span></p>
+            </div>
+        </div>
+
+        <div class="vio-card p-6 space-y-3">
+            <h3 class="text-sm font-bold text-white">Imagen de portada</h3>
+            <p class="text-xs text-purple-400/60">Requerido: <span class="text-purple-300 font-semibold">WebP · 1200 × 630 px</span> (exacto)</p>
+            <input type="hidden" id="cover_image_url" name="cover_image_url" value="{{ v_cover }}">
+            <input type="hidden" id="cover_image_key" name="cover_image_key" value="{{ v_cover_key }}">
+            <div id="uploader-cover"
+                 class="uploader-zone"
+                 data-uploader='{"urlInputId":"cover_image_url","keyInputId":"cover_image_key","endpoint":"/admin/api/upload/blog-cover","w":1200,"h":630}'
+                 data-initial-url="{{ v_cover }}"></div>
+        </div>
+
+        <div class="vio-card p-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white">Autor / Autora</h3>
+                <a href="{{ url_for('admin.blog_authors') }}" class="text-xs text-purple-400/60 hover:text-purple-300">Administrar autoras/es</a>
+            </div>
+            {% if authors %}
+            <div>
+                <label class="vio-label" for="blog_author_id">Seleccionar autora/or <span class="text-red-400">*</span></label>
+                <select id="blog_author_id" name="blog_author_id" class="vio-input" required>
+                    <option value="">Sin autora/or asignada/o</option>
+                    {% for author in authors %}
+                    <option value="{{ author.id }}" {{ 'selected' if v_blog_author_id == (author.id|string) else '' }}>{{ author.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if post and post.blog_author %}
+            <div class="flex items-center gap-3 bg-purple-800/20 rounded-xl p-3">
+                {% if post.blog_author.photo_url %}
+                <img src="{{ post.blog_author.photo_url }}" class="w-10 h-10 rounded-full object-cover ring-2 ring-purple-500/40" alt="">
+                {% else %}
+                <div class="w-10 h-10 rounded-full bg-purple-800/50 flex items-center justify-center text-purple-300 font-bold text-sm">{{ post.blog_author.name[0]|upper }}</div>
+                {% endif %}
+                <div>
+                    <p class="text-sm text-white font-medium">{{ post.blog_author.name }}</p>
+                    {% if post.blog_author.contact %}<p class="text-xs text-purple-400/70">{{ post.blog_author.contact }}</p>{% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% else %}
+            <p class="text-xs text-amber-300/80">No hay autoras/es creadas/os.
+                <a href="{{ url_for('admin.blog_authors') }}" class="underline hover:text-amber-200">Crear ahora</a></p>
+            {% endif %}
+        </div>
+    </div>
+</form>
+
+<div id="preview-modal" class="preview-modal-overlay">
+    <div class="preview-modal">
+        <div class="flex items-center justify-between p-5 border-b border-vio-700/30">
+            <h2 class="text-base font-bold text-white">Previsualización</h2>
+            <button id="close-preview" class="text-purple-400/60 hover:text-white transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="p-6 sm:p-8">
+            <div id="preview-cover" class="mb-6 hidden"><img id="preview-cover-img" src="" class="w-full rounded-xl object-cover aspect-video" alt=""></div>
+            <h1 id="preview-title" class="text-2xl sm:text-3xl font-extrabold text-white mb-2"></h1>
+            <div id="preview-body" class="preview-content mt-6"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const titleInput = document.getElementById('title');
+    const slugInput = document.getElementById('slug');
+    const slugHint = slugInput.parentElement.querySelector('span');
+    const coverUrlHidden = document.getElementById('cover_image_url');
+    const previewModal = document.getElementById('preview-modal');
+    const hiddenContent = document.getElementById('content_html');
+    const fallbackWrapper = document.getElementById('content_fallback_wrapper');
+    const fallbackTextarea = document.getElementById('content_fallback');
+    const form = document.getElementById('post-form');
+    const categorySelect = document.getElementById('category_id');
+    const coverKeyHidden = document.getElementById('cover_image_key');
+    const excerptInput = document.getElementById('excerpt');
+    const authorSelect = document.getElementById('blog_author_id');
+    let quillEditor = null;
+
+    function slugify(text) {
+        return (text || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/[\s_-]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+    }
+
+    let slugManuallyEdited = Boolean(slugInput.value);
+    slugInput.addEventListener('input', function () {
+        slugManuallyEdited = true;
+        this.value = slugify(this.value);
+        slugHint.textContent = '/' + (this.value || 'slug-generado');
+    });
+
+    titleInput.addEventListener('input', function () {
+        if (!slugManuallyEdited || !slugInput.value) {
+            slugInput.value = slugify(this.value);
+            slugHint.textContent = '/' + (slugInput.value || 'slug-generado');
+        }
+    });
+
+    function htmlToPlainText(html) {
+        const parser = document.createElement('div');
+        parser.innerHTML = html;
+        return (parser.textContent || parser.innerText || '').replace(/\u00a0/g, ' ').trim();
+    }
+
+    function setupRichEditor() {
+        if (!window.Quill) {
+            fallbackWrapper.classList.remove('hidden');
+            return;
+        }
+
+        quillEditor = new Quill('#quill_editor', {
+            theme: 'snow',
+            placeholder: 'Escribí el contenido completo de la entrada...',
+            modules: {
+                toolbar: [
+                    [{ header: [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ list: 'ordered' }, { list: 'bullet' }, { indent: '-1' }, { indent: '+1' }],
+                    [{ align: [] }],
+                    ['blockquote', 'code-block'],
+                    ['link', 'image'],
+                    ['clean']
+                ]
+            }
+        });
+
+        if (hiddenContent.value) {
+            quillEditor.root.innerHTML = hiddenContent.value;
+        }
+    }
+
+    form.addEventListener('submit', function (event) {
+        if (!titleInput.value.trim()) {
+            event.preventDefault();
+            customAlert('El título es obligatorio.', 'Revisión requerida');
+            titleInput.focus();
+            return;
+        }
+
+        if (!categorySelect.value) {
+            event.preventDefault();
+            customAlert('Seleccioná una categoría para continuar.', 'Revisión requerida');
+            categorySelect.focus();
+            return;
+        }
+
+        let htmlValue = '';
+        if (quillEditor) {
+            htmlValue = quillEditor.root.innerHTML;
+        } else {
+            htmlValue = fallbackTextarea.value;
+        }
+
+        hiddenContent.value = htmlValue;
+
+        if (!htmlToPlainText(htmlValue)) {
+            event.preventDefault();
+            customAlert('El contenido no puede estar vacío.', 'Revisión requerida');
+            return;
+        }
+
+        if (!excerptInput.value.trim()) {
+            event.preventDefault();
+            customAlert('El resumen/extracto es obligatorio.', 'Revisión requerida');
+            excerptInput.focus();
+            return;
+        }
+
+        if (excerptInput.value.trim().length > 600) {
+            event.preventDefault();
+            customAlert('El resumen/extracto no puede superar 600 caracteres.', 'Revisión requerida');
+            excerptInput.focus();
+            return;
+        }
+
+        if (!authorSelect.value) {
+            event.preventDefault();
+            customAlert('Debes seleccionar una autora/or.', 'Revisión requerida');
+            authorSelect.focus();
+            return;
+        }
+
+        if (!coverUrlHidden.value.trim() || !coverKeyHidden.value.trim()) {
+            event.preventDefault();
+            customAlert('Debes subir una imagen de portada antes de guardar.', 'Revisión requerida');
+        }
+    });
+
+    document.getElementById('open-preview').addEventListener('click', function () {
+        const content = quillEditor ? quillEditor.root.innerHTML : fallbackTextarea.value;
+        document.getElementById('preview-title').textContent = titleInput.value || 'Sin título';
+        document.getElementById('preview-body').innerHTML = content;
+        const prevCover = document.getElementById('preview-cover');
+        const prevImg = document.getElementById('preview-cover-img');
+        const coverUrl = coverUrlHidden ? coverUrlHidden.value : '';
+        if (coverUrl) { prevImg.src = coverUrl; prevCover.classList.remove('hidden'); }
+        else { prevCover.classList.add('hidden'); }
+        previewModal.classList.add('open');
+    });
+
+    document.getElementById('close-preview').addEventListener('click', function () {
+        previewModal.classList.remove('open');
+    });
+
+    previewModal.addEventListener('click', function (event) {
+        if (event.target === previewModal) previewModal.classList.remove('open');
+    });
+
+    // Quill CDN loads after this script block, so defer editor init until all resources are ready.
+    window.addEventListener('load', () => {
+        try { setupRichEditor(); } catch(e) { console.warn('setupRichEditor:', e); }
+        try { initUploaders(); } catch(e) { console.warn('initUploaders:', e); }
+    });
+</script>
+{% endblock %}

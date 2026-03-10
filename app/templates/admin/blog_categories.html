@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Categorías del Blog{% endblock %}
+{% block content %}
+
+<div class="flex items-center justify-between mb-8">
+    <div>
+        <h1 class="text-2xl font-extrabold text-white tracking-tight">Categorías del Blog</h1>
+        <p class="text-sm text-purple-400/70 mt-1">Administrá las categorías para organizar tus entradas</p>
+    </div>
+    <a href="{{ url_for('admin.blog_posts') }}" class="btn btn-ghost">Volver al Blog</a>
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+    <div class="xl:col-span-1">
+        <div class="vio-card p-6 space-y-4">
+            <h2 class="text-base font-bold text-white">Nueva categoría</h2>
+            <form method="POST" action="{{ url_for('admin.blog_categories') }}" class="space-y-4">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div>
+                    <label class="vio-label" for="name">Nombre <span class="text-red-400">*</span></label>
+                    <input id="name" name="name" type="text" required class="vio-input" placeholder="Ej: Noticias, Guías, Recursos">
+                </div>
+                <div>
+                    <label class="vio-label" for="description">Descripción <span class="text-red-400">*</span></label>
+                    <textarea id="description" name="description" rows="3" required class="vio-input resize-none" placeholder="Descripción corta de la categoría..."></textarea>
+                </div>
+                <label class="flex items-center gap-2 text-sm text-purple-200">
+                    <input type="checkbox" name="is_active" value="1" checked class="accent-purple-500">
+                    Categoría activa
+                </label>
+                <button type="submit" class="btn btn-primary w-full justify-center">Crear categoría</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="xl:col-span-2">
+        {% if categories %}
+        <div class="space-y-4">
+            {% for category in categories %}
+            <div class="vio-card p-5">
+                <form method="POST" action="{{ url_for('admin.blog_category_update', category_id=category.id) }}" class="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="md:col-span-2">
+                        <label class="vio-label">Nombre</label>
+                        <input type="text" name="name" value="{{ category.name }}" required class="vio-input">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="vio-label">Descripción <span class="text-red-400">*</span></label>
+                        <input type="text" name="description" value="{{ category.description or '' }}" required class="vio-input">
+                    </div>
+
+                    <div class="md:col-span-1">
+                        <label class="vio-label">Estado</label>
+                        <label class="flex items-center gap-2 text-sm text-purple-200 h-11">
+                            <input type="checkbox" name="is_active" value="1" {% if category.is_active %}checked{% endif %} class="accent-purple-500">
+                            Activa
+                        </label>
+                    </div>
+
+                    <div class="md:col-span-1 flex items-center gap-2 justify-end">
+                        <button type="submit" class="btn btn-ghost btn-sm">Guardar</button>
+                    </div>
+                </form>
+
+                <div class="mt-4 pt-4 border-t border-vio-700/25 flex items-center justify-between gap-3">
+                    <div class="text-xs text-purple-400/70">
+                        <span class="badge {{ 'badge-green' if category.is_active else 'badge-gray' }} mr-2">{{ 'Activa' if category.is_active else 'Inactiva' }}</span>
+                        slug: /{{ category.slug }} · entradas: {{ category.posts.count() }}
+                    </div>
+                    <form method="POST" action="{{ url_for('admin.blog_category_delete', category_id=category.id) }}" x-data x-on:submit.prevent="customConfirm('¿Eliminar categoría {{ category.name }}? Esta acción no se puede deshacer.').then(res => { if(res) $el.submit(); })">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="vio-card p-16 text-center">
+            <h3 class="text-lg font-bold text-white mb-2">Aún no hay categorías</h3>
+            <p class="text-sm text-purple-400/70">Creá la primera para habilitar la publicación de entradas.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
