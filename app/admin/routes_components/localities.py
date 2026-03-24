@@ -20,6 +20,12 @@ def _parse_optional_coordinate(value, min_value, max_value):
     return parsed
 
 
+def _opt(value):
+    """Convierte un valor de formulario a None si está vacío o es la cadena 'None'."""
+    v = (value or '').strip()
+    return None if (v == '' or v.lower() == 'none') else v
+
+
 # --- LOCALIDADES ---
 
 @admin_bp.route('/localities')
@@ -170,16 +176,23 @@ def reference_point_new(locality_id):
                                    locality=locality, point=None,
                                    categories=ReferencePoint.CATEGORIES)
 
+        phone = _opt(request.form.get('phone'))
+        if not phone:
+            flash('El teléfono es obligatorio.', 'error')
+            return render_template('admin/reference_point_edit.html',
+                                   locality=locality, point=None,
+                                   categories=ReferencePoint.CATEGORIES)
+
         point = ReferencePoint(
             locality_id=locality.id,
             name=name,
             category=category,
-            address=request.form.get('address', '').strip() or None,
-            phone=request.form.get('phone', '').strip() or None,
-            whatsapp=request.form.get('whatsapp', '').strip() or None,
-            email=request.form.get('email', '').strip() or None,
-            description=request.form.get('description', '').strip() or None,
-            schedule=request.form.get('schedule', '').strip() or None,
+            address=_opt(request.form.get('address')),
+            phone=phone,
+            whatsapp=_opt(request.form.get('whatsapp')),
+            email=_opt(request.form.get('email')),
+            description=_opt(request.form.get('description')),
+            schedule=_opt(request.form.get('schedule')),
             latitude=latitude,
             longitude=longitude,
             is_active=bool(request.form.get('is_active')),
@@ -207,12 +220,12 @@ def reference_point_edit(locality_id, point_id):
         valid_categories = {key for key, _ in ReferencePoint.CATEGORIES}
         point.name = request.form.get('name', '').strip()
         point.category = category
-        point.address = request.form.get('address', '').strip() or None
-        point.phone = request.form.get('phone', '').strip() or None
-        point.whatsapp = request.form.get('whatsapp', '').strip() or None
-        point.email = request.form.get('email', '').strip() or None
-        point.description = request.form.get('description', '').strip() or None
-        point.schedule = request.form.get('schedule', '').strip() or None
+        point.address = _opt(request.form.get('address'))
+        point.phone = _opt(request.form.get('phone'))
+        point.whatsapp = _opt(request.form.get('whatsapp'))
+        point.email = _opt(request.form.get('email'))
+        point.description = _opt(request.form.get('description'))
+        point.schedule = _opt(request.form.get('schedule'))
 
         if category not in valid_categories:
             flash('Categoría inválida para el punto de referencia.', 'error')
@@ -243,6 +256,12 @@ def reference_point_edit(locality_id, point_id):
 
         if not point.name:
             flash('El nombre es obligatorio.', 'error')
+            return render_template('admin/reference_point_edit.html',
+                                   locality=locality, point=point,
+                                   categories=ReferencePoint.CATEGORIES)
+
+        if not point.phone:
+            flash('El teléfono es obligatorio.', 'error')
             return render_template('admin/reference_point_edit.html',
                                    locality=locality, point=point,
                                    categories=ReferencePoint.CATEGORIES)

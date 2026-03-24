@@ -44,37 +44,37 @@
                 </div>
 
                 <div>
-                    <label class="vio-label" for="phone">Teléfono</label>
-                    <input type="text" id="phone" name="phone"
-                           value="{{ point.phone if point else '' }}"
+                    <label class="vio-label" for="phone">Teléfono <span class="text-red-400">*</span></label>
+                    <input type="text" id="phone" name="phone" required
+                           value="{{ point.phone or '' if point else '' }}"
                            class="vio-input" placeholder="099 000 000">
                 </div>
 
                 <div>
                     <label class="vio-label" for="whatsapp">WhatsApp</label>
                     <input type="text" id="whatsapp" name="whatsapp"
-                           value="{{ point.whatsapp if point else '' }}"
+                           value="{{ point.whatsapp or '' if point else '' }}"
                            class="vio-input" placeholder="+598 99 000 000">
                 </div>
 
                 <div>
                     <label class="vio-label" for="email">Email</label>
                     <input type="email" id="email" name="email"
-                           value="{{ point.email if point else '' }}"
+                           value="{{ point.email or '' if point else '' }}"
                            class="vio-input" placeholder="contacto@ejemplo.uy">
                 </div>
 
                 <div class="sm:col-span-2">
                     <label class="vio-label" for="address">Dirección</label>
                     <input type="text" id="address" name="address"
-                           value="{{ point.address if point else '' }}"
+                           value="{{ point.address or '' if point else '' }}"
                            class="vio-input" placeholder="Calle 123, Ciudad">
                 </div>
 
                 <div class="sm:col-span-2">
                     <label class="vio-label" for="schedule">Horario de atención</label>
                     <input type="text" id="schedule" name="schedule"
-                           value="{{ point.schedule if point else '' }}"
+                           value="{{ point.schedule or '' if point else '' }}"
                            class="vio-input" placeholder="Lun–Vie 8:00–16:00">
                 </div>
 
@@ -141,7 +141,7 @@
                     <label class="vio-label" for="description">Descripción / Notas</label>
                     <textarea id="description" name="description" rows="3"
                               class="vio-input resize-none"
-                              placeholder="Información adicional para quienes buscan este punto...">{{ point.description if point else '' }}</textarea>
+                              placeholder="Información adicional para quienes buscan este punto...">{{ point.description or '' if point else '' }}</textarea>
                 </div>
             </div>
 
