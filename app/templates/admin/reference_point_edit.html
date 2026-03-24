@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar' if point else 'Nuevo' }} Punto de Referencia · {{ locality.name }}{% endblock %}
+{% block content %}
+
+<link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+/>
+
+<div class="flex items-center gap-3 mb-8">
+    <a href="{{ url_for('admin.reference_points', locality_id=locality.id) }}" class="text-purple-400/60 hover:text-purple-300 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+    </a>
+    <div>
+        <h1 class="text-2xl font-extrabold text-white tracking-tight">
+            {{ 'Editar Punto' if point else 'Nuevo Punto de Referencia' }}
+        </h1>
+        <p class="text-sm text-purple-400/70 mt-0.5">Localidad: {{ locality.name }}</p>
+    </div>
+</div>
+
+<div class="max-w-2xl">
+    <div class="vio-card p-8">
+        <form method="POST" class="space-y-5">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div class="sm:col-span-2">
+                    <label class="vio-label" for="name">Nombre del punto <span class="text-red-400">*</span></label>
+                    <input type="text" id="name" name="name" required
+                           value="{{ point.name if point else '' }}"
+                           class="vio-input" placeholder="Ej: Comisaría 4ta, Hospital Lavalleja...">
+                </div>
+
+                <div>
+                    <label class="vio-label" for="category">Categoría <span class="text-red-400">*</span></label>
+                    <select id="category" name="category" class="vio-input">
+                        {% for key, label in categories %}
+                        <option value="{{ key }}" {{ 'selected' if point and point.category == key }}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="vio-label" for="phone">Teléfono</label>
+                    <input type="text" id="phone" name="phone"
+                           value="{{ point.phone if point else '' }}"
+                           class="vio-input" placeholder="099 000 000">
+                </div>
+
+                <div>
+                    <label class="vio-label" for="whatsapp">WhatsApp</label>
+                    <input type="text" id="whatsapp" name="whatsapp"
+                           value="{{ point.whatsapp if point else '' }}"
+                           class="vio-input" placeholder="+598 99 000 000">
+                </div>
+
+                <div>
+                    <label class="vio-label" for="email">Email</label>
+                    <input type="email" id="email" name="email"
+                           value="{{ point.email if point else '' }}"
+                           class="vio-input" placeholder="contacto@ejemplo.uy">
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="vio-label" for="address">Dirección</label>
+                    <input type="text" id="address" name="address"
+                           value="{{ point.address if point else '' }}"
+                           class="vio-input" placeholder="Calle 123, Ciudad">
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="vio-label" for="schedule">Horario de atención</label>
+                    <input type="text" id="schedule" name="schedule"
+                           value="{{ point.schedule if point else '' }}"
+                           class="vio-input" placeholder="Lun–Vie 8:00–16:00">
+                </div>
+
+                {% set has_geo = point and point.latitude is not none and point.longitude is not none %}
+                <div class="sm:col-span-2 mt-1">
+                    <div class="p-4 rounded-xl border border-vio-500/25 bg-vio-700/10">
+                        <div class="flex items-start gap-3">
+                            <input
+                                type="checkbox"
+                                id="with_geolocation"
+                                name="with_geolocation"
+                                value="1"
+                                {% if has_geo %}checked{% endif %}
+                                class="mt-1 w-4 h-4 rounded accent-purple-500"
+                            >
+                            <div class="flex-1">
+                                <label for="with_geolocation" class="text-sm font-semibold text-white cursor-pointer">
+                                    ¿Agregar locación geográfica?
+                                </label>
+                                <p class="text-xs text-purple-400/70 mt-0.5">
+                                    Es opcional. Si activás esta opción, podés marcar el punto exacto en el mapa.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div id="geo-section" class="mt-4 space-y-4 {% if not has_geo %}hidden{% endif %}">
+                            <div id="reference-point-map" class="w-full h-72 rounded-xl border border-vio-500/25 overflow-hidden shadow-lg shadow-vio-950/40"></div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="vio-label" for="latitude">Latitud</label>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        id="latitude"
+                                        name="latitude"
+                                        value="{{ point.latitude if has_geo else '' }}"
+                                        class="vio-input"
+                                        placeholder="-34.905"
+                                    >
+                                </div>
+                                <div>
+                                    <label class="vio-label" for="longitude">Longitud</label>
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        id="longitude"
+                                        name="longitude"
+                                        value="{{ point.longitude if has_geo else '' }}"
+                                        class="vio-input"
+                                        placeholder="-56.191"
+                                    >
+                                </div>
+                            </div>
+
+                            <p class="text-xs text-purple-300/70">
+                                Tip: hacé click en el mapa para ubicar el marcador o editá manualmente las coordenadas.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="vio-label" for="description">Descripción / Notas</label>
+                    <textarea id="description" name="description" rows="3"
+                              class="vio-input resize-none"
+                              placeholder="Información adicional para quienes buscan este punto...">{{ point.description if point else '' }}</textarea>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                <input type="checkbox" id="is_active" name="is_active" value="1"
+                       {% if not point or point.is_active %}checked{% endif %}
+                       class="w-4 h-4 rounded accent-purple-500">
+                <div>
+                    <label for="is_active" class="text-sm font-semibold text-white cursor-pointer">Punto activo</label>
+                    <p class="text-xs text-purple-400/70">Los puntos inactivos no aparecen en el mapa público</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3 pt-2">
+                <button type="submit" class="btn btn-primary flex-1 justify-center">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    {{ 'Guardar cambios' if point else 'Crear punto' }}
+                </button>
+                <a href="{{ url_for('admin.reference_points', locality_id=locality.id) }}" class="btn btn-ghost">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+></script>
+<script>
+    (function () {
+        const toggle = document.getElementById('with_geolocation');
+        const geoSection = document.getElementById('geo-section');
+        const mapContainer = document.getElementById('reference-point-map');
+        const latInput = document.getElementById('latitude');
+        const lngInput = document.getElementById('longitude');
+
+        if (!toggle || !geoSection || !mapContainer || !latInput || !lngInput || !window.L) {
+            return;
+        }
+
+        const defaultCenter = [-34.2928, -55.2372];
+        const initialLat = latInput.value ? Number(latInput.value) : null;
+        const initialLng = lngInput.value ? Number(lngInput.value) : null;
+        const hasInitialCoords = Number.isFinite(initialLat) && Number.isFinite(initialLng);
+
+        const map = L.map(mapContainer, {
+            zoomControl: true,
+        }).setView(hasInitialCoords ? [initialLat, initialLng] : defaultCenter, hasInitialCoords ? 15 : 8);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors',
+        }).addTo(map);
+
+        let marker = null;
+
+        function setMarker(lat, lng, pan) {
+            if (marker) {
+                marker.setLatLng([lat, lng]);
+            } else {
+                marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                marker.on('dragend', function (event) {
+                    const position = event.target.getLatLng();
+                    latInput.value = position.lat.toFixed(6);
+                    lngInput.value = position.lng.toFixed(6);
+                });
+            }
+
+            latInput.value = Number(lat).toFixed(6);
+            lngInput.value = Number(lng).toFixed(6);
+
+            if (pan) {
+                map.panTo([lat, lng], { animate: true, duration: 0.3 });
+            }
+        }
+
+        if (hasInitialCoords) {
+            setMarker(initialLat, initialLng, false);
+        }
+
+        map.on('click', function (event) {
+            if (!toggle.checked) {
+                return;
+            }
+            setMarker(event.latlng.lat, event.latlng.lng, false);
+        });
+
+        function syncFromInputs() {
+            const lat = Number(latInput.value);
+            const lng = Number(lngInput.value);
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                setMarker(lat, lng, true);
+            }
+        }
+
+        latInput.addEventListener('change', syncFromInputs);
+        lngInput.addEventListener('change', syncFromInputs);
+
+        function updateGeoVisibility() {
+            if (toggle.checked) {
+                geoSection.classList.remove('hidden');
+                setTimeout(function () {
+                    map.invalidateSize();
+                }, 120);
+            } else {
+                geoSection.classList.add('hidden');
+                latInput.value = '';
+                lngInput.value = '';
+                if (marker) {
+                    map.removeLayer(marker);
+                    marker = null;
+                }
+            }
+        }
+
+        toggle.addEventListener('change', updateGeoVisibility);
+        updateGeoVisibility();
+    })();
+</script>
+{% endblock %}

@@ -1,0 +1,470 @@
+﻿<!DOCTYPE html>
+<html lang="es" class="scroll-smooth" x-data="{ sidebarOpen: false }">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <title>{% block title %}Panel Admin{% endblock %} — Punto Violeta Digital</title>
+
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        vio: {
+                            50:  '#f5f0ff',
+                            100: '#ede5ff',
+                            200: '#dac8ff',
+                            300: '#bf99ff',
+                            400: '#a066ff',
+                            500: '#8533ff',
+                            600: '#7016f0',
+                            700: '#5e0dcc',
+                            800: '#4e0da8',
+                            900: '#420f87',
+                            950: '#1e0050',
+                        },
+                        void: {
+                            50:  '#f5f3ff',
+                            100: '#ede9fe',
+                            700: '#160b36',
+                            800: '#0f0721',
+                            900: '#09041a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Layout body */
+        body { font-family: 'Inter', sans-serif; background: #09041a; color: #f0ebff; }
+
+        /* Sidebar */
+        #vio-sidebar {
+            background: linear-gradient(180deg, #130929 0%, #0d0720 100%);
+            border-right: 1px solid rgba(139, 92, 246, 0.15);
+        }
+
+        /* Top nav */
+        #vio-topnav {
+            background: rgba(9, 4, 26, 0.88);
+            backdrop-filter: blur(14px);
+            border-bottom: 1px solid rgba(139, 92, 246, 0.15);
+        }
+
+        /* Sidebar nav items */
+        .nav-item {
+            display: flex; align-items: center; gap: .75rem;
+            padding: .55rem .85rem;
+            border-radius: .75rem;
+            color: #c4b5fd;
+            font-size: .875rem; font-weight: 500;
+            transition: all .18s ease;
+            text-decoration: none;
+        }
+        .nav-item:hover { background: rgba(139,92,246,.18); color: #ede9fe; }
+        .nav-item.active { background: linear-gradient(90deg,rgba(124,58,237,.55),rgba(124,58,237,.25)); color: #f5f3ff; }
+        .nav-item svg { width: 1.15rem; height: 1.15rem; flex-shrink: 0; opacity: .75; }
+        .nav-item:hover svg, .nav-item.active svg { opacity: 1; }
+        .nav-item-sub { padding-left: 1.75rem; font-size: .82rem; color: #a78bfa; }
+
+        .nav-section-label {
+            padding: .25rem .85rem .35rem;
+            font-size: .7rem; font-weight: 700;
+            letter-spacing: .1em; text-transform: uppercase;
+            color: rgba(139,92,246,.55);
+        }
+
+        /* Cards */
+        .vio-card {
+            background: rgba(30, 15, 60, 0.7);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            border-radius: 1.25rem;
+            backdrop-filter: blur(10px);
+        }
+        .vio-card-hover { transition: all .2s ease; }
+        .vio-card-hover:hover {
+            border-color: rgba(139, 92, 246, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(109,40,217,.18);
+        }
+
+        /* Stat cards */
+        .stat-card {
+            background: linear-gradient(135deg, rgba(30,15,60,.9), rgba(20,8,45,.95));
+            border: 1px solid rgba(139,92,246,.25);
+            border-radius: 1.25rem;
+            padding: 1.5rem;
+            transition: all .2s ease;
+        }
+        .stat-card:hover {
+            border-color: rgba(139,92,246,.5);
+            box-shadow: 0 8px 32px rgba(109,40,217,.2);
+            transform: translateY(-2px);
+        }
+
+        /* Inputs & Textareas */
+        .vio-input {
+            background: rgba(20, 8, 45, 0.8);
+            border: 1px solid rgba(139, 92, 246, 0.25);
+            border-radius: .75rem;
+            color: #f0ebff;
+            padding: .6rem 1rem;
+            font-size: .9rem;
+            width: 100%;
+            outline: none;
+            transition: border-color .18s ease, box-shadow .18s ease;
+        }
+        .vio-input:focus {
+            border-color: #7c3aed;
+            box-shadow: 0 0 0 3px rgba(124,58,237,.2);
+        }
+        .vio-input::placeholder { color: rgba(196,181,253,.35); }
+
+        /* Labels */
+        .vio-label {
+            display: block;
+            font-size: .8rem; font-weight: 600;
+            color: #a78bfa;
+            margin-bottom: .35rem;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+            padding: .55rem 1.1rem;
+            border-radius: .75rem;
+            font-size: .875rem; font-weight: 700;
+            transition: all .18s ease;
+            cursor: pointer; text-decoration: none;
+            border: 1.5px solid transparent;
+            white-space: nowrap;
+        }
+        .btn:focus { outline: none; }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(109,40,217,.35);
+        }
+        .btn-primary:hover { background: linear-gradient(135deg,#8b47f8,#7c3aed); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(109,40,217,.45); }
+
+        .btn-success { background: linear-gradient(135deg,#059669,#047857); color:#fff; box-shadow: 0 4px 14px rgba(5,150,105,.3); }
+        .btn-success:hover { background: linear-gradient(135deg,#10b981,#059669); transform: translateY(-1px); }
+
+        .btn-danger { background: linear-gradient(135deg,#dc2626,#b91c1c); color:#fff; box-shadow: 0 4px 14px rgba(220,38,38,.3); }
+        .btn-danger:hover { background: linear-gradient(135deg,#ef4444,#dc2626); }
+
+        .btn-ghost {
+            background: rgba(139,92,246,.1);
+            color: #c4b5fd;
+            border-color: rgba(139,92,246,.2);
+        }
+        .btn-ghost:hover { background: rgba(139,92,246,.2); color: #ede9fe; }
+
+        .btn-outline-danger {
+            background: transparent;
+            color: #f87171;
+            border-color: rgba(248,113,113,.35);
+        }
+        .btn-outline-danger:hover { background: rgba(239,68,68,.15); }
+
+        .btn-sm { padding: .35rem .8rem; font-size: .8rem; border-radius: .6rem; }
+        .btn-xs { padding: .25rem .6rem; font-size: .75rem; border-radius: .5rem; }
+
+        /* Badge */
+        .badge {
+            display: inline-flex; align-items: center; gap: .3rem;
+            padding: .2rem .6rem;
+            border-radius: 9999px;
+            font-size: .72rem; font-weight: 700;
+            white-space: nowrap;
+        }
+        .badge-violet { background: rgba(124,58,237,.25); color: #c4b5fd; border: 1px solid rgba(124,58,237,.35); }
+        .badge-green  { background: rgba(16,185,129,.2);  color: #6ee7b7; border: 1px solid rgba(16,185,129,.3); }
+        .badge-amber  { background: rgba(245,158,11,.2);  color: #fcd34d; border: 1px solid rgba(245,158,11,.3); }
+        .badge-red    { background: rgba(239,68,68,.2);   color: #fca5a5; border: 1px solid rgba(239,68,68,.3); }
+        .badge-gray   { background: rgba(148,163,184,.15);color: #cbd5e1; border: 1px solid rgba(148,163,184,.25); }
+
+        /* Table */
+        .vio-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .vio-table thead th {
+            padding: .75rem 1rem;
+            font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+            color: #7c3aed;
+            border-bottom: 1px solid rgba(139,92,246,.2);
+            text-align: left;
+        }
+        .vio-table tbody tr {
+            border-bottom: 1px solid rgba(139,92,246,.08);
+            transition: background .15s ease;
+        }
+        .vio-table tbody tr:hover { background: rgba(139,92,246,.07); }
+        .vio-table tbody td { padding: .9rem 1rem; font-size: .875rem; color: #e2ddff; vertical-align: middle; }
+
+        /* Flash messages */
+        .flash-success { background: rgba(16,185,129,.18); border:1px solid rgba(16,185,129,.35); color:#6ee7b7; }
+        .flash-error   { background: rgba(239,68,68,.18);  border:1px solid rgba(239,68,68,.35);  color:#fca5a5; }
+        .flash-info    { background: rgba(59,130,246,.18); border:1px solid rgba(59,130,246,.35); color:#93c5fd; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(124,58,237,.4); border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(124,58,237,.7); }
+
+        /* Glow effects */
+        .glow-vio { box-shadow: 0 0 40px rgba(124,58,237,.25); }
+        .text-gradient { background: linear-gradient(135deg,#c084fc,#818cf8); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    </style>
+</head>
+
+<body class="antialiased">
+
+    <!-- TOP NAVBAR -->
+    <nav id="vio-topnav" class="fixed top-0 z-50 w-full">
+        <div class="px-4 py-3 flex items-center justify-between">
+            <!-- Left: hamburger + brand -->
+            <div class="flex items-center gap-3">
+                <button @click="sidebarOpen = !sidebarOpen"
+                        class="p-2 rounded-lg text-vio-400 hover:bg-vio-700/20 transition-colors sm:hidden">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+                <a href="{{ url_for('admin.dashboard') }}" class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-vio-500 to-vio-700 flex items-center justify-center shadow-lg shadow-vio-900/50">
+                        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
+                        </svg>
+                    </div>
+                    <span class="hidden sm:block font-extrabold text-lg text-gradient tracking-tight">Punto Violeta</span>
+                    <span class="hidden sm:block text-xs text-vio-400 font-medium mt-0.5 -ml-1">Admin</span>
+                </a>
+            </div>
+
+            <!-- Right: user menu -->
+            {% if current_user.is_authenticated %}
+            <div x-data="{ open: false }" class="relative">
+                <button @click="open = !open"
+                        class="flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-vio-700/20 transition-colors">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-vio-500 to-vio-700 flex items-center justify-center text-white font-bold text-sm shadow shadow-vio-900/50">
+                        {{ current_user.username[0].upper() }}
+                    </div>
+                    <div class="hidden sm:block text-left">
+                        <div class="text-sm font-semibold text-void-50">{{ current_user.username }}</div>
+                        <div class="text-xs text-vio-400">{{ 'Super Admin' if current_user.is_superuser else 'Administrador' }}</div>
+                    </div>
+                    <svg class="w-4 h-4 text-vio-400 transition-transform" :class="open ? 'rotate-180' : ''" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                    </svg>
+                </button>
+                <div x-show="open" @click.outside="open = false" x-transition
+                     class="absolute right-0 mt-2 w-52 vio-card py-1 shadow-xl shadow-black/50 z-50">
+                    <div class="px-4 py-3 border-b border-vio-700/30">
+                        <div class="text-sm font-semibold text-void-50 truncate">{{ current_user.username }}</div>
+                        <div class="text-xs text-vio-400 truncate">{{ current_user.email }}</div>
+                    </div>
+                    <a href="{{ url_for('admin.logout') }}"
+                       class="flex items-center gap-2 px-4 py-2.5 text-sm text-red-400 hover:bg-red-900/20 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                        Cerrar Sesión
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <!-- SIDEBAR -->
+    <!-- Mobile overlay -->
+    <div x-show="sidebarOpen" @click="sidebarOpen = false"
+         x-transition:enter="transition-opacity ease-in duration-200"
+         x-transition:leave="transition-opacity ease-out duration-150"
+         class="fixed inset-0 z-30 bg-black/60 sm:hidden"></div>
+
+    <aside id="vio-sidebar"
+           class="fixed top-0 left-0 z-40 w-64 h-screen pt-16 transition-transform sm:translate-x-0"
+           :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'">
+        <div class="h-full overflow-y-auto py-4 px-3 space-y-1">
+
+            <p class="nav-section-label mt-3">Principal</p>
+            <a href="{{ url_for('admin.dashboard') }}"
+               class="nav-item {{ 'active' if request.endpoint == 'admin.dashboard' else '' }}">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zm10 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>
+                Dashboard</a>
+
+            <p class="nav-section-label mt-5">Recursos</p>
+            <a href="{{ url_for('admin.localities') }}"
+               class="nav-item {{ 'active' if 'localit' in (request.endpoint or '') or 'reference_point' in (request.endpoint or '') else '' }}">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                Localidades</a>
+
+            <p class="nav-section-label mt-5">Contenido</p>
+            <a href="{{ url_for('admin.blog_posts') }}"
+               class="nav-item {{ 'active' if request.endpoint in ('admin.blog_posts', 'admin.blog_post_new', 'admin.blog_post_edit') else '' }}">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+                Blog</a>
+
+            <a href="{{ url_for('admin.blog_authors') }}"
+               class="nav-item nav-item-sub {{ 'active' if 'blog_author' in (request.endpoint or '') else '' }}">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                Autoras/es</a>
+
+            <a href="{{ url_for('admin.blog_categories') }}"
+               class="nav-item nav-item-sub {{ 'active' if 'blog_categor' in (request.endpoint or '') else '' }}">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-5 5a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/></svg>
+                Categorías</a>
+
+            <a href="{{ url_for('admin.readings') }}"
+               class="nav-item {{ 'active' if 'reading' in (request.endpoint or '') else '' }}">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                Lecturas</a>
+
+            <p class="nav-section-label mt-5">Comunicación</p>
+            <a href="{{ url_for('admin.messages') }}"
+               class="nav-item {{ 'active' if 'message' in (request.endpoint or '') else '' }}">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                <span class="flex-1">Mensajes</span>
+                {# count badge is rendered in template if needed #}
+            </a>
+
+            {% if current_user.is_authenticated and current_user.is_superuser %}
+            <p class="nav-section-label mt-5">Sistema</p>
+            <a href="{{ url_for('admin.audit_logs') }}"
+               class="nav-item {{ 'active' if 'audit' in (request.endpoint or '') else '' }}">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                Auditoría</a>
+            {% endif %}
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="sm:ml-64 pt-16 min-h-screen">
+        <div class="p-6 max-w-screen-2xl mx-auto">
+
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="mb-6 space-y-2">
+                    {% for category, message in messages %}
+                    <div class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
+                                {{ 'flash-success' if category == 'success' else 'flash-error' if category == 'error' else 'flash-info' }}"
+                         x-data x-init="setTimeout(() => $el.remove(), 5000)">
+                        {% if category == 'success' %}
+                        <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+                        {% elif category == 'error' %}
+                        <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                        {% endif %}
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    {% block scripts %}{% endblock %}
+
+    <!-- Global Modal UI -->
+    <div id="global-modal-overlay" class="fixed inset-0 bg-black/85 z-[9999] hidden items-center justify-center p-4 overflow-y-auto" style="display: none;">
+        <div class="bg-[#0f0528] border border-purple-500/30 rounded-xl w-full max-w-md mx-auto shadow-2xl relative">
+            <div class="flex items-center justify-between p-4 border-b border-vio-700/30">
+                <h2 id="global-modal-title" class="text-base font-bold text-white"></h2>
+                <button onclick="__globalModalClose()" class="text-purple-400/60 hover:text-white transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="p-6">
+                <p id="global-modal-message" class="text-purple-100 text-sm whitespace-pre-wrap mb-6 max-h-96 overflow-y-auto"></p>
+                <div id="global-modal-actions" class="flex justify-end gap-3">
+                    <button id="global-modal-cancel" onclick="__globalModalClose()" class="btn btn-ghost">Cancelar</button>
+                    <button id="global-modal-confirm" class="btn btn-primary">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let __globalModalResolve = null;
+
+        window.__globalModalClose = function() {
+            document.getElementById('global-modal-overlay').style.display = 'none';
+            if (__globalModalResolve) {
+                __globalModalResolve(false);
+                __globalModalResolve = null;
+            }
+        }
+
+        window.customConfirm = function(message, title = 'Confirmar acción') {
+            return new Promise((resolve) => {
+                document.getElementById('global-modal-title').textContent = title;
+                document.getElementById('global-modal-message').textContent = message;
+                document.getElementById('global-modal-cancel').style.display = 'inline-flex';
+                
+                const btnConfirm = document.getElementById('global-modal-confirm');
+                btnConfirm.textContent = 'Confirmar';
+                btnConfirm.className = 'btn btn-danger';
+                
+                __globalModalResolve = resolve;
+                
+                btnConfirm.onclick = () => {
+                    document.getElementById('global-modal-overlay').style.display = 'none';
+                    resolve(true);
+                    __globalModalResolve = null;
+                };
+                
+                document.getElementById('global-modal-overlay').style.display = 'flex';
+            });
+        };
+
+        window.customAlert = function(message, title = 'Información') {
+            return new Promise((resolve) => {
+                document.getElementById('global-modal-title').textContent = title;
+                document.getElementById('global-modal-message').textContent = message;
+                document.getElementById('global-modal-cancel').style.display = 'none';
+                
+                const btnConfirm = document.getElementById('global-modal-confirm');
+                btnConfirm.textContent = 'Aceptar';
+                btnConfirm.className = 'btn btn-primary';
+                
+                __globalModalResolve = resolve;
+                
+                btnConfirm.onclick = () => {
+                    document.getElementById('global-modal-overlay').style.display = 'none';
+                    resolve(true);
+                    __globalModalResolve = null;
+                };
+                
+                document.getElementById('global-modal-overlay').style.display = 'flex';
+            });
+        };
+        
+        document.getElementById('global-modal-overlay').addEventListener('click', function(e) {
+            if (e.target === this) __globalModalClose();
+        });
+    </script>
+</body>
+</html>
