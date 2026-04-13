@@ -18,6 +18,13 @@ _BLOG_POST_LIMITS = {
     'cover_image_key': 300,
 }
 
+_SLUG_SEPARATOR_RE = re.compile(
+    r'[\s_\-\u2010\u2011\u2012\u2013\u2014\u2015]+'
+)
+_SLUG_ALLOWED_CHARS_RE = re.compile(
+    r'[^a-z0-9\s_\-\u2010\u2011\u2012\u2013\u2014\u2015]'
+)
+
 
 def _slugify(text: str) -> str:
     """Genera un slug URL-seguro a partir de un texto."""
@@ -28,8 +35,8 @@ def _slugify(text: str) -> str:
     text = re.sub(r'[óòöô]', 'o', text)
     text = re.sub(r'[úùüû]', 'u', text)
     text = re.sub(r'ñ', 'n', text)
-    text = re.sub(r'[^a-z0-9\s-]', '', text)
-    text = re.sub(r'[\s_-]+', '-', text)
+    text = _SLUG_ALLOWED_CHARS_RE.sub('', text)
+    text = _SLUG_SEPARATOR_RE.sub('-', text)
     return text.strip('-')
 
 

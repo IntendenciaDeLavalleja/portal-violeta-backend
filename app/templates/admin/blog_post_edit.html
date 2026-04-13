@@ -260,7 +260,7 @@ function initUploaders() {
             </div>
             <div>
                 <label class="vio-label" for="slug">Slug</label>
-                <input type="text" id="slug" name="slug" value="{{ v_slug }}" class="vio-input" placeholder="mi-entrada-del-blog">
+                <input type="text" id="slug" name="slug" value="{{ v_slug }}" class="vio-input" placeholder="mi-entrada-del-blog" pattern="[A-Za-z0-9\-\s]+" title="Usá letras, números y guiones para separar palabras." autocapitalize="off" spellcheck="false">
                 <p class="text-xs text-purple-400/65 mt-2">URL final: <span class="text-purple-300">/{{ v_slug or 'slug-generado' }}</span></p>
             </div>
         </div>
@@ -349,8 +349,9 @@ function initUploaders() {
             .toLowerCase()
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[\u2010\u2011\u2012\u2013\u2014\u2015]/g, '-')
             .replace(/[^a-z0-9\s-]/g, '')
-            .replace(/[\s_-]+/g, '-')
+            .replace(/[\s-]+/g, '-')
             .replace(/^-+|-+$/g, '');
     }
 
